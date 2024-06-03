@@ -1,0 +1,22 @@
+# Variant CALLING FORMAT
+# SRR28293875.fastq sequence is downloaded from NCBI.SRA
+
+bowtie2 -x hg38_index  SRR28293875_pass1.fastq  -S SRR28293875.sam
+samtools view -bS SRR28293875.sam > SRR28293875.bam
+samtools sort SRR28293875.bam -o SRR28293875_sorted.bam
+samtools index SRR28293875_sorted.bam
+
+# Adding readgroup to the sorted bam file 
+java -jar picard.jar AddOrReplaceReadGroups I=SRR28293875_sorted.bam O=SRR28293875_rg_added_sorted.bam  RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM=sample1
+samtools index SRR28293875_rg_added_sorted.bam
+/apps/gatk-4.3.0.0/gatk HaplotypeCaller -R hg38.fa -I SRR28293875_rg_added_sorted.bam -O SRR28293875.vcf
+
+# Filtering 
+gatk VariantFiltration -R hg38.fa -V SRR27883875.vcf -O SRR27883875_filtered_variants.vcf --filter-expression "QD < 2.0 || FS > 60.0 || MQ < 40.0" --filter-name "my_filters"
+
+# Annotations
+# Convert VCF to AVinput format
+convert2annovar.pl -format vcf4 2_SRR27883875_filtered_variants.vcf > 2_SRR27883875_filtered_variants.avinput
+
+# Annotate variants using ANNOVAR
+table_annovar.pl 2_SRR27883875_filtered_variants.avinput /home/sunita/soft1/annovar/humandb/ -buildver hg19 -out 2_annotated_variants -remove -protocol refGene -operation g -nastring . -vcfi
